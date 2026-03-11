@@ -17,7 +17,8 @@ export function DataEntryForm({ onAddEntry, onUpdateEntry, editingEntry, onCance
         joiningDate: '',
         sharing: '1',
         advance: '',
-        rent: ''
+        rent: '',
+        isAC: false
     });
 
     // Populate form when editing Entry changes
@@ -27,10 +28,11 @@ export function DataEntryForm({ onAddEntry, onUpdateEntry, editingEntry, onCance
                 roomNumber: String(editingEntry.roomNumber),
                 fullName: editingEntry.fullName,
                 phoneNumber: editingEntry.phoneNumber || '',
-                joiningDate: String(editingEntry.joiningDate),
+                joiningDate: editingEntry.joiningDate ? String(editingEntry.joiningDate) : '',
                 sharing: String(editingEntry.sharing),
                 advance: editingEntry.advance ? String(editingEntry.advance) : '',
-                rent: String(editingEntry.rent)
+                rent: String(editingEntry.rent),
+                isAC: editingEntry.isAC || false
             });
         } else {
             // Reset to default
@@ -41,22 +43,26 @@ export function DataEntryForm({ onAddEntry, onUpdateEntry, editingEntry, onCance
                 joiningDate: '',
                 sharing: '1',
                 advance: '',
-                rent: ''
+                rent: '',
+                isAC: false
             });
         }
     }, [editingEntry]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        const { name, value, type, checked } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
     };
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
 
         // Basic validation
-        if (!formData.roomNumber || !formData.fullName || !formData.joiningDate || !formData.rent) {
-            alert("Please fill in all required fields (Room, Name, Date, Rent)");
+        if (!formData.roomNumber || !formData.fullName || !formData.rent) {
+            alert("Please fill in all required fields (Room, Name, Rent)");
             return;
         }
 
@@ -64,10 +70,11 @@ export function DataEntryForm({ onAddEntry, onUpdateEntry, editingEntry, onCance
             roomNumber: Number(formData.roomNumber),
             fullName: formData.fullName,
             phoneNumber: formData.phoneNumber,
-            joiningDate: Number(formData.joiningDate),
+            joiningDate: formData.joiningDate ? Number(formData.joiningDate) : undefined,
             sharing: Number(formData.sharing),
             advance: formData.advance ? Number(formData.advance) : undefined,
-            rent: Number(formData.rent)
+            rent: Number(formData.rent),
+            isAC: formData.isAC
         };
 
         if (editingEntry) {
@@ -84,6 +91,7 @@ export function DataEntryForm({ onAddEntry, onUpdateEntry, editingEntry, onCance
             phoneNumber: '',
             sharing: '1',
             advance: '',
+            isAC: false,
             // Keep joining date and rent as they might be the same
         }));
     };
@@ -133,7 +141,7 @@ export function DataEntryForm({ onAddEntry, onUpdateEntry, editingEntry, onCance
                 </div>
 
                 <div>
-                    <label htmlFor="joiningDate">Joining Day (1-31) *</label>
+                    <label htmlFor="joiningDate">Joining Day (1-31)</label>
                     <input
                         type="number"
                         id="joiningDate"
@@ -142,7 +150,6 @@ export function DataEntryForm({ onAddEntry, onUpdateEntry, editingEntry, onCance
                         max="31"
                         value={formData.joiningDate}
                         onChange={handleChange}
-                        required
                     />
                 </div>
 
@@ -174,6 +181,20 @@ export function DataEntryForm({ onAddEntry, onUpdateEntry, editingEntry, onCance
                         value={formData.advance}
                         onChange={handleChange}
                     />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+                    <label htmlFor="isAC" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0, marginTop: '24px' }}>
+                        <input
+                            type="checkbox"
+                            id="isAC"
+                            name="isAC"
+                            checked={formData.isAC}
+                            onChange={handleChange}
+                            style={{ width: 'auto', margin: 0 }}
+                        />
+                        AC Room
+                    </label>
                 </div>
 
                 <div>

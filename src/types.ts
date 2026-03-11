@@ -3,8 +3,9 @@ export interface Entry {
     roomNumber: number;
     fullName: string;
     phoneNumber?: string;
-    joiningDate: number;
+    joiningDate?: number;
     sharing: number;
     advance?: number;
     rent: number;
+    isAC: boolean;
 }

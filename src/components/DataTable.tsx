@@ -88,6 +88,7 @@ export function DataTable({ entries, onEdit, onDelete }: DataTableProps) {
                                 ['fullName', 'Name'],
                                 ['phoneNumber', 'Phone'],
                                 ['joiningDate', 'Joined'],
+                                ['isAC', 'AC'],
                                 ['advance', 'Advance'],
                                 ['rent', 'Rent']
                             ] as [SortField, string][]).map(([field, label]) => (
@@ -117,7 +118,14 @@ export function DataTable({ entries, onEdit, onDelete }: DataTableProps) {
                                 <td style={{ padding: '12px', textAlign: 'center' }}>{entry.sharing}</td>
                                 <td style={{ padding: '12px' }}>{entry.fullName}</td>
                                 <td style={{ padding: '12px', color: 'var(--text-muted)' }}>{entry.phoneNumber || '-'}</td>
-                                <td style={{ padding: '12px' }}>{entry.joiningDate}</td>
+                                <td style={{ padding: '12px' }}>{entry.joiningDate || '-'}</td>
+                                <td style={{ padding: '12px' }}>
+                                    {entry.isAC ? (
+                                        <span style={{ background: 'var(--primary)', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>AC</span>
+                                    ) : (
+                                        <span style={{ background: 'var(--background-alt)', color: 'var(--text-muted)', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>Non-AC</span>
+                                    )}
+                                </td>
                                 <td style={{ padding: '12px', color: 'var(--secondary)', fontWeight: '500' }}>
                                     {entry.advance !== undefined ? ('₹' + entry.advance) : '-'}
                                 </td>

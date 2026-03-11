@@ -3,7 +3,7 @@ import type { Entry } from '../types';
 export const exportToCSV = (entries: Entry[], filename = 'radheya_nest_entries.csv') => {
     if (entries.length === 0) return;
 
-    const headers = ['Room Number', 'Sharing', 'Full Name', 'Phone Number', 'Joining Day', 'Advance', 'Rent'];
+    const headers = ['Room Number', 'Sharing', 'Full Name', 'Phone Number', 'Joining Day', 'AC/Non-AC', 'Advance', 'Rent'];
 
     const csvContent = [
         headers.join(','),
@@ -12,7 +12,8 @@ export const exportToCSV = (entries: Entry[], filename = 'radheya_nest_entries.c
             e.sharing,
             `"${e.fullName}"`, // Escape quotes inside names if necessary
             e.phoneNumber || '',
-            e.joiningDate,
+            e.joiningDate || '',
+            e.isAC ? 'AC' : 'Non-AC',
             e.advance || '',
             e.rent
         ].join(','))
