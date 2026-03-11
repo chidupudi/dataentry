@@ -1,53 +1,69 @@
-import { useState, useEffect, useRef } from 'react';
-import { Download, Upload, FileJson, Building2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Download, Building2 } from 'lucide-react';
 import { DataEntryForm } from './components/DataEntryForm';
 import { DataTable } from './components/DataTable';
 import { exportToCSV } from './utils/csvExport';
 import type { Entry } from './types';
+import { collection, doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { db } from './firebase';
 
 function App() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load from local API on mount
+  // Firestore reference
+  const entriesCollection = collection(db, 'tenants');
+
+  // Load from Firestore on mount and setup real-time listener
   useEffect(() => {
-    fetch('/api/data')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setEntries(data);
-        }
-      })
-      .catch(e => console.error("Failed to fetch data from local API:", e))
-      .finally(() => setIsLoaded(true));
+    const unsubscribe = onSnapshot(entriesCollection, (snapshot) => {
+      const data: Entry[] = [];
+      snapshot.forEach((doc) => {
+        data.push({ ...doc.data(), id: doc.id } as Entry);
+      });
+      setEntries(data);
+      setIsLoaded(true);
+    }, (error) => {
+      console.error("Failed to fetch data from Firestore:", error);
+      setIsLoaded(true);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  // Save to local API whenever entries change
-  useEffect(() => {
-    if (isLoaded) {
-      fetch('/api/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(entries)
-      }).catch(e => console.error("Failed to save data:", e));
+  const handleAddEntry = async (newEntryData: Omit<Entry, 'id'>) => {
+    try {
+      const newId = crypto.randomUUID();
+      const newEntry: Entry = { ...newEntryData, id: newId };
+      const docRef = doc(entriesCollection, newId);
+      await setDoc(docRef, newEntry);
+    } catch (error) {
+      console.error("Error adding entry:", error);
+      alert("Failed to add entry");
     }
-  }, [entries, isLoaded]);
-
-  const handleAddEntry = (newEntryData: Omit<Entry, 'id'>) => {
-    const newEntry: Entry = { ...newEntryData, id: crypto.randomUUID() };
-    setEntries(prev => [...prev, newEntry]);
   };
 
-  const handleUpdateEntry = (updatedEntry: Entry) => {
-    setEntries(prev => prev.map(e => e.id === updatedEntry.id ? updatedEntry : e));
-    setEditingEntry(null);
+  const handleUpdateEntry = async (updatedEntry: Entry) => {
+    try {
+      const docRef = doc(entriesCollection, updatedEntry.id);
+      await setDoc(docRef, updatedEntry);
+      setEditingEntry(null);
+    } catch (error) {
+      console.error("Error updating entry:", error);
+      alert("Failed to update entry");
+    }
   };
 
-  const handleDeleteEntry = (id: string) => {
+  const handleDeleteEntry = async (id: string) => {
     if (confirm("Are you sure you want to delete this entry?")) {
-      setEntries(prev => prev.filter(e => e.id !== id));
+      try {
+        const docRef = doc(entriesCollection, id);
+        await deleteDoc(docRef);
+      } catch (error) {
+        console.error("Error deleting entry:", error);
+        alert("Failed to delete entry");
+      }
     }
   };
 
@@ -57,42 +73,6 @@ function App() {
 
   const handleExportCSV = () => {
     exportToCSV(entries);
-  };
-
-  const handleExportJSON = () => {
-    if (entries.length === 0) return;
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(entries, null, 2));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "radheya_nest_data.json");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-  };
-
-  const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const json = event.target?.result as string;
-        const parsed = JSON.parse(json);
-        if (Array.isArray(parsed)) {
-          setEntries(parsed);
-          alert("Data loaded successfully from file!");
-        } else {
-          alert("Invalid data format in JSON file.");
-        }
-      } catch (error) {
-        alert("Failed to parse JSON file.");
-      }
-    };
-    reader.readAsText(file);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
   };
 
   return (
@@ -126,34 +106,10 @@ function App() {
         </div>
 
         <div style={{ display: 'flex', gap: '12px' }}>
-          <input
-            type="file"
-            accept=".json"
-            style={{ display: 'none' }}
-            ref={fileInputRef}
-            onChange={handleImportJSON}
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="btn btn-secondary"
-            title="Load Data from JSON File"
-          >
-            <Upload size={18} />
-            Load JSON
-          </button>
-          <button
-            onClick={handleExportJSON}
-            className="btn btn-secondary"
-            disabled={entries.length === 0}
-            title={entries.length === 0 ? "No data to export" : "Save Data to JSON File"}
-          >
-            <FileJson size={18} />
-            Save JSON
-          </button>
           <button
             onClick={handleExportCSV}
             className="btn btn-secondary"
-            disabled={entries.length === 0}
+            disabled={entries.length === 0 || !isLoaded}
             title={entries.length === 0 ? "No data to export" : "Export to CSV"}
           >
             <Download size={18} />
@@ -163,17 +119,25 @@ function App() {
       </header>
 
       <main>
-        <DataEntryForm
-          onAddEntry={handleAddEntry}
-          onUpdateEntry={handleUpdateEntry}
-          editingEntry={editingEntry}
-          onCancelEdit={() => setEditingEntry(null)}
-        />
-        <DataTable
-          entries={entries}
-          onEdit={handleEditEntry}
-          onDelete={handleDeleteEntry}
-        />
+        {!isLoaded ? (
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+            Loading data from database...
+          </div>
+        ) : (
+          <>
+            <DataEntryForm
+              onAddEntry={handleAddEntry}
+              onUpdateEntry={handleUpdateEntry}
+              editingEntry={editingEntry}
+              onCancelEdit={() => setEditingEntry(null)}
+            />
+            <DataTable
+              entries={entries}
+              onEdit={handleEditEntry}
+              onDelete={handleDeleteEntry}
+            />
+          </>
+        )}
       </main>
 
     </div>
