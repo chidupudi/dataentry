@@ -66,16 +66,17 @@ export function DataEntryForm({ onAddEntry, onUpdateEntry, editingEntry, onCance
             return;
         }
 
-        const entryPayload = {
+        const entryPayload: Omit<Entry, 'id'> = {
             roomNumber: Number(formData.roomNumber),
             fullName: formData.fullName,
-            phoneNumber: formData.phoneNumber,
-            joiningDate: formData.joiningDate ? Number(formData.joiningDate) : undefined,
             sharing: Number(formData.sharing),
-            advance: formData.advance ? Number(formData.advance) : undefined,
             rent: Number(formData.rent),
             isAC: formData.isAC
         };
+
+        if (formData.phoneNumber) entryPayload.phoneNumber = formData.phoneNumber;
+        if (formData.joiningDate) entryPayload.joiningDate = Number(formData.joiningDate);
+        if (formData.advance) entryPayload.advance = Number(formData.advance);
 
         if (editingEntry) {
             onUpdateEntry({ ...entryPayload, id: editingEntry.id });
